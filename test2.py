@@ -79,7 +79,6 @@ def main():
     model = L.Classifier(MakeMoonModel())
     optimizer = optimizers.Adam()
     optimizer.setup(model)
-    updater = training.StandardUpdater(X, )
     train(X, y, model, optimizer)
     visualize(X, y, model)
 
