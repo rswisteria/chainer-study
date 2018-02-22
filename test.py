@@ -1,19 +1,10 @@
-import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.datasets import load_iris
-from chainer import cuda, Variable, Chain, optimizers
 import chainer.functions as F
 import chainer.links as L
-
-
-def train(X, y, model, optimizer):
-    x = Variable(X.astype(np.float32))
-    t = Variable(y.astype(np.int32))
-
-    for i in range(20000):
-        optimizer.update(model, x, t)
-        if i % 1000 == 0:
-            print("Finished %i" % i)
+from sklearn.datasets import load_iris
+from chainer import cuda, Variable, Chain, optimizers, iterators, training
+from chainer.datasets import tuple_dataset
+from chainer.training import extensions
 
 
 def main():
@@ -21,7 +12,12 @@ def main():
     model = L.Classifier(IrisModel())
     optimizer = optimizers.Adam()
     optimizer.setup(model)
-    train(iris.data, iris.target, model, optimizer)
+    train_data = tuple_dataset.TupleDataset(iris.data.astype(np.float32), iris.target.astype(np.int32))
+    train_iter = iterators.SerialIterator(train_data, batch_size=50)
+    updater = training.StandardUpdater(train_iter, optimizer)
+    trainer = training.Trainer(updater, (10000, 'epoch'), out='result')
+    trainer.extend(extensions.ProgressBar())
+    trainer.run()
 
     X = np.array([
         [5.4, 3.6, 1.4, 0.3],
