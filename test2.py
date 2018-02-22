@@ -1,7 +1,8 @@
 import numpy as np
 from sklearn import datasets, linear_model
 import matplotlib.pyplot as plt
-from chainer import Chain, optimizers, Variable, training
+from chainer import Chain, optimizers, Variable, training, iterators
+from chainer.datasets import tuple_dataset
 import chainer.functions as F
 import chainer.links as L
 from chainer.training import extensions
@@ -47,19 +48,9 @@ def plot_decision_boundary(pred_func, X, y):
 
 
 def predict(model, x_data):
-    x = Variable(x_data.astype(np.float32))
+    x = x_data.astype(np.float32)
     y = model.predictor(x)
     return np.argmax(y.data, axis=1)
-
-
-def train(X, y, model, optimizer):
-    x = Variable(X.astype(np.float32))
-    t = Variable(y.astype(np.int32))
-
-    for i in range(20000):
-        optimizer.update(model, x, t)
-        if i % 1000 == 0:
-            print("Finished %i" % i)
 
 
 class MakeMoonModel(Chain):
@@ -70,6 +61,7 @@ class MakeMoonModel(Chain):
         )
 
     def __call__(self, x):
+        x = x.astype(np.float32)
         h = F.tanh(self.l1(x))
         return self.l2(h)
 
@@ -79,7 +71,15 @@ def main():
     model = L.Classifier(MakeMoonModel())
     optimizer = optimizers.Adam()
     optimizer.setup(model)
-    train(X, y, model, optimizer)
+
+    train_dataset = tuple_dataset.TupleDataset(X, y)
+    train_iter = iterators.SerialIterator(train_dataset, batch_size=200)
+
+    updater = training.StandardUpdater(train_iter, optimizer)
+    trainer = training.Trainer(updater, (10000, 'epoch'), out='result')
+    trainer.extend(extensions.ProgressBar())
+    trainer.run()
+
     visualize(X, y, model)
 
 
